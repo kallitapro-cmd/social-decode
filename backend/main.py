@@ -1,11 +1,11 @@
 import json
 import os
-from typing import List, Optional
+from typing import List
 
-import anthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from openai import OpenAI, APIError
 from pydantic import BaseModel
 
 load_dotenv()
@@ -23,7 +23,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = OpenAI(
+    api_key=os.getenv("DEEPSEEK_API_KEY"),
+    base_url="https://api.deepseek.com",
+)
 
 SYSTEM_PROMPT = """Você é um assistente especializado em ajudar pessoas autistas a compreender dinâmicas sociais.
 
@@ -65,14 +68,16 @@ def health_check():
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        response = client.chat.completions.create(
+            model="deepseek-chat",
             max_tokens=600,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": m.role, "content": m.content} for m in request.messages],
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                *[{"role": m.role, "content": m.content} for m in request.messages],
+            ],
         )
-        return {"content": response.content[0].text}
-    except anthropic.APIError as e:
+        return {"content": response.choices[0].message.content}
+    except APIError as e:
         raise HTTPException(status_code=502, detail=f"Erro na API de IA: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -112,14 +117,16 @@ Regras para o plano:
     messages_for_plan.append({"role": "user", "content": plan_prompt})
 
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        response = client.chat.completions.create(
+            model="deepseek-chat",
             max_tokens=2000,
-            system=SYSTEM_PROMPT,
-            messages=messages_for_plan,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                *messages_for_plan,
+            ],
         )
 
-        content = response.content[0].text.strip()
+        content = response.choices[0].message.content.strip()
 
         if "```json" in content:
             content = content.split("```json")[1].split("```")[0].strip()
@@ -130,7 +137,7 @@ Regras para o plano:
         return plan
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"Erro ao processar plano: {str(e)}")
-    except anthropic.APIError as e:
+    except APIError as e:
         raise HTTPException(status_code=502, detail=f"Erro na API de IA: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

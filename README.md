@@ -62,7 +62,7 @@ uvicorn main:app --reload
 
 | Variável | Descrição |
 |---|---|
-| `ANTHROPIC_API_KEY` | Chave da API da Anthropic |
+| `DEEPSEEK_API_KEY` | Chave da API do DeepSeek |
 | `ALLOWED_ORIGINS` | Origens CORS permitidas (ex: `https://seusite.com`) |
 
 ### Deploy no Render
@@ -87,7 +87,7 @@ uvicorn main:app --reload
 
 - **Frontend**: React 18, Vite 6, Tailwind CSS 3, Lucide Icons
 - **Backend**: FastAPI, Uvicorn, Anthropic SDK
-- **IA**: Claude (claude-sonnet-4-20250514)
+- **IA**: DeepSeek (deepseek-chat via API compatível com OpenAI)
 
 ## Acessibilidade
 
